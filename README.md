@@ -76,4 +76,8 @@ Works in all modern browsers: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+.
 
 ## License
 
-MIT © [9 Lives IT Solutions]()
+MIT — see [LICENSE](LICENSE).
+
+---
+
+*9 Lives IT Solutions — Healthcare IT & Infrastructure Automation*
