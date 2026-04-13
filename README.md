@@ -7,7 +7,7 @@
 
 A clean, self-contained Markdown editor and live preview — no build step, no server, no dependencies to install. Open `md-viewer.html` in any modern browser and start writing.
 
-![md-viewer screenshot](https://github.com/user-attachments/assets/c5015c4f-184a-4b4d-9557-2b4c8766a542)
+![md-viewer screenshot](https://github.com/user-attachments/assets/5d395cd6-a790-4e50-9139-9c0525b3b899)
 
 ---
 
