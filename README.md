@@ -30,7 +30,7 @@ No installation required.
 
 ```bash
 # Clone
-git clone https://github.com/9lives-it/md-viewer.git
+git clone https://github.com/9LivesITSolutions/md-viewer.git
 cd md-viewer
 
 # Open
