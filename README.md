@@ -1,7 +1,5 @@
 # md-viewer
 
-> 🇫🇷 [Version française disponible](README.fr.md)
-
 ![HTML](https://img.shields.io/badge/HTML-single--file-orange?logo=html5)
 ![No dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -76,12 +74,6 @@ Works in all modern browsers: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+.
 
 ---
 
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for the full version history.
-
----
-
 ## License
 
-MIT © [9 Lives IT Solutions](https://9lives-it.fr)
+MIT © [9 Lives IT Solutions]()
