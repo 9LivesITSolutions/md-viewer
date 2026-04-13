@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MD Viewer</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white:      #ffffff;
+  --bg:         #f7f7f5;
+  --surface:    #ffffff;
+  --border:     #e5e5e3;
+  --border-mid: #d4d4d0;
+  --text:       #1a1a18;
+  --text-2:     #6b6b66;
+  --text-3:     #a0a09a;
+  --accent:     #2563eb;
+  --accent-bg:  #eff4ff;
+  --green:      #16a34a;
+  --header-h:   56px;
+  --radius:     8px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+header {
+  height: var(--header-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.3px;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: var(--text);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-icon svg { width: 16px; height: 16px; fill: white; }
+
+.divider-v {
+  width: 1px; height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.file-info {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.file-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  display: none;
+}
+.file-dot.visible { display: block; }
+#fileName { color: var(--text-2); font-weight: 500; }
+
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* sync toggle */
+.sync-toggle {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  transition: background .15s;
+}
+.sync-toggle:hover { background: var(--bg); }
+.sw { display:none; }
+.sw-track {
+  width: 32px; height: 18px;
+  background: var(--border-mid);
+  border-radius: 9px;
+  position: relative;
+  transition: background .2s;
+  cursor: pointer;
+}
+.sw:checked + .sw-track { background: var(--accent); }
+.sw-track::after {
+  content:'';
+  position:absolute;
+  width:12px; height:12px;
+  background:white;
+  border-radius:50%;
+  top:3px; left:3px;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.sw:checked + .sw-track::after { transform: translateX(14px); }
+
+/* buttons */
+.btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--border-mid); background: var(--bg); color: var(--text); }
+.btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.btn.primary:hover { background: #1d4fd8; border-color: #1d4fd8; }
+.btn.danger:hover { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+
+/* ── WORKSPACE ──────────────────────────────────────────────── */
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  height: calc(100vh - var(--header-h));
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--white);
+}
+
+/* ── PANE HEADER ────────────────────────────────────────────── */
+.pane-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.pane-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--text-3);
+  border: 1px solid var(--border);
+}
+
+.pane-bar-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.icon-btn {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.icon-btn:hover { border-color: var(--border-mid); color: var(--text-2); background: var(--bg); }
+.icon-btn svg { width: 13px; height: 13px; }
+
+/* ── EDITOR ─────────────────────────────────────────────────── */
+.editor-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.drop-overlay {
+  position: absolute; inset: 0;
+  background: rgba(37,99,235,.04);
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+  margin: 4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 5;
+  pointer-events: none;
+}
+.drop-overlay.active { display: flex; }
+.drop-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+textarea {
+  width: 100%;
+  height: 100%;
+  background: white;
+  color: var(--text);
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 24px 28px;
+  font-family: 'Fira Code', 'Menlo', monospace;
+  font-size: 13.5px;
+  line-height: 1.75;
+  tab-size: 2;
+  caret-color: var(--accent);
+}
+textarea::placeholder { color: var(--text-3); }
+
+/* line numbers effect via background */
+textarea {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent calc(1.75em - 1px),
+    var(--bg) calc(1.75em - 1px),
+    var(--bg) 1.75em
+  );
+  background-size: 100% 1.75em;
+  background-attachment: local;
+}
+
+/* ── PREVIEW ─────────────────────────────────────────────────── */
+.preview-scroll {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--white);
+  padding: 32px 40px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+}
+.empty-icon {
+  width: 48px; height: 48px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.empty-icon svg { width: 22px; height: 22px; color: var(--text-3); }
+.empty-title { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.empty-sub { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+
+/* ── MARKDOWN STYLES ────────────────────────────────────────── */
+.md {
+  max-width: 680px;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 15px;
+  line-height: 1.85;
+  color: #1c1c1a;
+}
+
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.8em;
+  margin-bottom: .6em;
+}
+.md h1 {
+  font-size: 1.9em;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  padding-bottom: .5em;
+  border-bottom: 1px solid var(--border);
+  margin-top: 0;
+}
+.md h2 { font-size: 1.35em; padding-bottom: .35em; border-bottom: 1px solid var(--border); }
+.md h3 { font-size: 1.1em; }
+.md h4 { font-size: .95em; color: var(--text-2); }
+
+.md p { margin: .9em 0; }
+
+.md a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.md a:hover { color: #1d4fd8; }
+
+.md strong { font-weight: 700; color: var(--text); }
+.md em { font-style: italic; }
+
+.md ul, .md ol { padding-left: 1.5em; margin: .75em 0; }
+.md li { margin: .35em 0; }
+.md li::marker { color: var(--text-3); }
+.md ul li::marker { content: "–  "; }
+
+.md blockquote {
+  border-left: 3px solid var(--border-mid);
+  margin: 1.5em 0;
+  padding: .5em 1.2em;
+  color: var(--text-2);
+  font-style: italic;
+  background: var(--bg);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.md blockquote p { margin: 0; }
+
+.md code {
+  font-family: 'Fira Code', monospace;
+  font-size: .83em;
+  background: var(--bg);
+  color: #c7254e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.md pre {
+  margin: 1.4em 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.md pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border: none;
+  font-size: 13px;
+  display: block;
+}
+.md pre .hljs {
+  background: #f9f9f8;
+  padding: 18px 22px;
+  border-radius: 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.4em 0;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+}
+.md th {
+  background: var(--bg);
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  letter-spacing: .2px;
+}
+.md td {
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+.md tr:hover td { background: #fafaf9; }
+
+.md hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+.md img { max-width: 100%; border-radius: var(--radius); border: 1px solid var(--border); }
+
+/* ── RESIZER ────────────────────────────────────────────────── */
+.resizer {
+  width: 1px;
+  background: var(--border);
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.resizer:hover, .resizer.active { background: var(--accent); }
+.resizer-handle {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px; height: 44px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: col-resize;
+  transition: border-color .15s, box-shadow .15s;
+}
+.resizer:hover .resizer-handle { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.resizer-dot { width: 2px; height: 14px; background: var(--border-mid); border-radius: 2px; }
+.resizer:hover .resizer-dot { background: var(--accent); }
+
+/* ── SCROLLBARS ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ── TOAST ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--text);
+  color: white;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all .25s;
+  pointer-events: none;
+  z-index: 999;
+  box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* file input */
+#fileInput { display: none; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 20 20"><path d="M3 4h14v1.5H3V4zm0 3.5h10V9H3V7.5zm0 3.5h14v1.5H3V11zm0 3.5h8V16H3v-1.5z"/></svg>
+    </div>
+    MD Viewer
+  </div>
+
+  <div class="divider-v"></div>
+
+  <div class="file-info">
+    <div class="file-dot" id="fileDot"></div>
+    <span id="fileName">No file</span>
+  </div>
+
+  <div class="header-right">
+    <label class="sync-toggle" title="Synchronize scroll">
+      <input type="checkbox" class="sw" id="syncScroll" checked>
+      <div class="sw-track"></div>
+      Sync scroll
+    </label>
+
+    <div class="divider-v"></div>
+
+    <button class="btn danger" id="btnClear">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5.5 4l.5 9h4l.5-9"/></svg>
+      Clear
+    </button>
+    <button class="btn" id="btnCopy">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="8" height="9" rx="1.5"/><path d="M3 11V3a1 1 0 011-1h8"/></svg>
+      Copy HTML
+    </button>
+    <button class="btn primary" id="btnExport">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 13h8M8 3v7M5 7l3 3 3-3"/></svg>
+      Export PDF
+    </button>
+  </div>
+</header>
+
+<!-- WORKSPACE -->
+<div class="workspace" id="workspace">
+
+  <!-- LEFT: EDITOR -->
+  <div class="pane">
+    <div class="pane-bar">
+      <span class="pane-label">Source</span>
+      <span class="pill" id="charCount">0 chars</span>
+      <div class="pane-bar-right">
+        <input type="file" id="fileInput" accept=".md,.markdown,.txt">
+        <button class="btn" id="uploadBtn" style="height:30px;font-size:12px;padding:0 10px;">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 11V4M5 7l3-3 3 3M3 13h10"/></svg>
+          Open file
+        </button>
+      </div>
+    </div>
+    <div class="editor-wrap" id="editorWrap">
+      <div class="drop-overlay" id="dropOverlay">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5"><path d="M12 15V3M7 8l5-5 5 5M20 16v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3"/></svg>
+        <div class="drop-label">Drop .md file here</div>
+      </div>
+      <textarea
+        id="editor"
+        spellcheck="false"
+        placeholder="Paste your Markdown here, or drop a .md file…"
+      ></textarea>
+    </div>
+  </div>
+
+  <!-- RESIZER -->
+  <div class="resizer" id="resizer">
+    <div class="resizer-handle">
+      <div class="resizer-dot"></div>
+      <div class="resizer-dot"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: PREVIEW -->
+  <div class="pane">
+    <div class="pane-bar">
+      <span class="pane-label">Preview</span>
+      <span class="pill" id="wordCount">0 words</span>
+      <div class="pane-bar-right">
+        <button class="icon-btn" id="btnScrollTop" title="Scroll to top">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 11V5M5 8l3-3 3 3M3 13h10"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="preview-scroll" id="previewScroll">
+      <div class="md" id="preview">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6M9 16h6M7 4H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1h-2M9 4a2 2 0 004 0H9z"/></svg>
+          </div>
+          <div class="empty-title">No content</div>
+          <div class="empty-sub">Paste Markdown in the editor<br>or open a .md file</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const editor        = document.getElementById('editor');
+const preview       = document.getElementById('preview');
+const previewScroll = document.getElementById('previewScroll');
+const editorWrap    = document.getElementById('editorWrap');
+const dropOverlay   = document.getElementById('dropOverlay');
+const charCount     = document.getElementById('charCount');
+const wordCount     = document.getElementById('wordCount');
+const syncScroll    = document.getElementById('syncScroll');
+const fileDot       = document.getElementById('fileDot');
+const fileName      = document.getElementById('fileName');
+const toast         = document.getElementById('toast');
+
+// ── Marked config ─────────────────────────────────────────────
+const renderer = new marked.Renderer();
+renderer.code = (code, lang) => {
+  const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+  const highlighted = hljs.highlight(String(code), { language }).value;
+  return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+};
+marked.setOptions({ gfm: true, breaks: true });
+
+// ── Render ────────────────────────────────────────────────────
+let lastSrc = null;
+function render() {
+  const src = editor.value;
+  if (src === lastSrc) return;
+  lastSrc = src;
+
+  const chars = src.length;
+  const words = src.trim() ? src.trim().split(/\s+/).length : 0;
+  charCount.textContent = chars.toLocaleString() + ' chars';
+  wordCount.textContent = words.toLocaleString() + ' words';
+
+  if (!src.trim()) {
+    preview.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6M9 16h6M7 4H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1h-2M9 4a2 2 0 004 0H9z"/></svg>
+        </div>
+        <div class="empty-title">No content</div>
+        <div class="empty-sub">Paste Markdown in the editor<br>or open a .md file</div>
+      </div>`;
+    return;
+  }
+  preview.innerHTML = marked.parse(src, { renderer });
+}
+
+editor.addEventListener('input', render);
+
+// ── Sync scroll ───────────────────────────────────────────────
+let syncing = false;
+editor.addEventListener('scroll', () => {
+  if (!syncScroll.checked || syncing) return;
+  syncing = true;
+  const r = editor.scrollTop / Math.max(editor.scrollHeight - editor.clientHeight, 1);
+  previewScroll.scrollTop = r * (previewScroll.scrollHeight - previewScroll.clientHeight);
+  requestAnimationFrame(() => syncing = false);
+});
+previewScroll.addEventListener('scroll', () => {
+  if (!syncScroll.checked || syncing) return;
+  syncing = true;
+  const r = previewScroll.scrollTop / Math.max(previewScroll.scrollHeight - previewScroll.clientHeight, 1);
+  editor.scrollTop = r * (editor.scrollHeight - editor.clientHeight);
+  requestAnimationFrame(() => syncing = false);
+});
+
+// ── Drag & drop ───────────────────────────────────────────────
+let dc = 0;
+editorWrap.addEventListener('dragenter', e => { e.preventDefault(); dc++; dropOverlay.classList.add('active'); });
+editorWrap.addEventListener('dragleave', () => { if (--dc <= 0) { dc=0; dropOverlay.classList.remove('active'); } });
+editorWrap.addEventListener('dragover',  e => e.preventDefault());
+editorWrap.addEventListener('drop', e => {
+  e.preventDefault(); dc=0; dropOverlay.classList.remove('active');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+// ── File upload ───────────────────────────────────────────────
+document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  const r = new FileReader();
+  r.onload = ev => {
+    editor.value = ev.target.result;
+    fileDot.classList.add('visible');
+    fileName.textContent = file.name;
+    render();
+    showToast('✓ ' + file.name + ' loaded');
+  };
+  r.readAsText(file);
+}
+
+// ── Buttons ───────────────────────────────────────────────────
+document.getElementById('btnClear').addEventListener('click', () => {
+  editor.value = '';
+  fileDot.classList.remove('visible');
+  fileName.textContent = 'No file';
+  render();
+  showToast('Content cleared');
+});
+
+document.getElementById('btnCopy').addEventListener('click', () => {
+  navigator.clipboard.writeText(preview.innerHTML)
+    .then(() => showToast('HTML copied to clipboard'));
+});
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head>
+<meta charset="UTF-8"><title>Markdown Export</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Fira+Code&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Merriweather',serif;max-width:760px;margin:0 auto;padding:48px 40px;color:#1c1c1a;line-height:1.85;font-size:15px;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5,h6{font-family:'Inter',sans-serif;font-weight:600;line-height:1.3;margin-top:1.8em;margin-bottom:.6em;color:#1a1a18}
+h1{font-size:1.9em;font-weight:700;padding-bottom:.5em;border-bottom:1px solid #e5e5e3;margin-top:0}
+h2{font-size:1.35em;padding-bottom:.35em;border-bottom:1px solid #e5e5e3}
+h3{font-size:1.1em}
+p{margin:.9em 0}
+a{color:#2563eb}
+strong{font-weight:700;color:#1a1a18}
+ul,ol{padding-left:1.5em;margin:.75em 0}
+li{margin:.35em 0}
+blockquote{border-left:3px solid #d4d4d0;margin:1.5em 0;padding:.5em 1.2em;color:#6b6b66;font-style:italic;background:#f7f7f5;border-radius:0 8px 8px 0}
+code{font-family:'Fira Code',monospace;font-size:.83em;background:#f7f7f5;color:#c7254e;padding:2px 6px;border-radius:4px;border:1px solid #e5e5e3}
+pre{margin:1.4em 0;border-radius:8px;border:1px solid #e5e5e3;overflow:hidden}
+pre code{background:#f9f9f8;color:#1a1a18;padding:18px 22px;display:block;border:none;border-radius:0;font-size:13px;line-height:1.65}
+table{width:100%;border-collapse:collapse;margin:1.4em 0;font-size:14px;font-family:'Inter',sans-serif}
+th{background:#f7f7f5;text-align:left;font-weight:600;font-size:12px;padding:10px 14px;border:1px solid #e5e5e3;color:#6b6b66}
+td{padding:9px 14px;border:1px solid #e5e5e3}
+hr{border:none;border-top:1px solid #e5e5e3;margin:2em 0}
+img{max-width:100%;border-radius:8px;border:1px solid #e5e5e3}
+@media print{body{padding:0 24px}h1{page-break-after:avoid}pre,blockquote,table{page-break-inside:avoid}}
+</style></head><body>${preview.innerHTML}</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
+});
+
+document.getElementById('btnScrollTop').addEventListener('click', () => {
+  previewScroll.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ── Resizer ───────────────────────────────────────────────────
+const resizer   = document.getElementById('resizer');
+const workspace = document.getElementById('workspace');
+let isResizing  = false;
+
+resizer.addEventListener('mousedown', e => {
+  isResizing = true;
+  resizer.classList.add('active');
+  document.body.style.userSelect = 'none';
+  document.body.style.cursor = 'col-resize';
+});
+window.addEventListener('mousemove', e => {
+  if (!isResizing) return;
+  const rect = workspace.getBoundingClientRect();
+  const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width * 100, 20), 80);
+  workspace.style.gridTemplateColumns = `${pct}fr 1px ${100-pct}fr`;
+});
+window.addEventListener('mouseup', () => {
+  if (!isResizing) return;
+  isResizing = false;
+  resizer.classList.remove('active');
+  document.body.style.userSelect = '';
+  document.body.style.cursor = '';
+});
+
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  toast.textContent = msg;
+  toast.classList.add('show');
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+// ── Sample ────────────────────────────────────────────────────
+editor.value = `# Project Documentation — Usage Guide
+
+Welcome to **MD Viewer**, a clean and professional Markdown preview interface.
+
+## Getting started
+
+Replace this content by pasting your Markdown into the editor on the left, or use the **Open file** button to load a \`.md\` file.
+
+## Features
+
+- **Real-time preview** — the render updates as you type
+- **Drag & drop** — drop a \`.md\` file directly onto the editor
+- **Scroll sync** — both panels scroll together
+- **PDF export** — clean print layout via the browser
+- **Copy HTML** — grab the generated HTML in one click
+- **Resizable panels** — adjust the editor/preview ratio
+
+## Code example
+
+\`\`\`typescript
+interface Document {
+  title: string;
+  content: string;
+  updatedAt: Date;
+}
+
+function renderMarkdown(doc: Document): string {
+  return marked.parse(doc.content);
+}
+\`\`\`
+
+## Reference table
+
+| Syntax          | Description           | Example            |
+|-----------------|-----------------------|--------------------|
+| \`**text**\`  | Bold                  | **text**           |
+| \`*text*\`    | Italic                | *text*             |
+| \`# Heading\` | Level 1 heading       | Heading H1         |
+| \`> text\`    | Blockquote            | Blockquote         |
+| \`---\`       | Horizontal rule       | —                  |
+
+---
+
+> This is a sample document. Replace it with your own content.
+`;
+render();
+</script>
+</body>
+</html>
