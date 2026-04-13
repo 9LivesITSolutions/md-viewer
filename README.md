@@ -7,7 +7,7 @@
 
 A clean, self-contained Markdown editor and live preview — no build step, no server, no dependencies to install. Open `md-viewer.html` in any modern browser and start writing.
 
-![md-viewer screenshot](https://placehold.co/900x480/f7f7f5/1a1a18?text=md-viewer+screenshot)
+![md-viewer screenshot](https://github.com/user-attachments/assets/c5015c4f-184a-4b4d-9557-2b4c8766a542)
 
 ---
 
