@@ -11,6 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
+
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -691,36 +692,89 @@ document.getElementById('btnCopy').addEventListener('click', () => {
     .then(() => showToast('HTML copied to clipboard'));
 });
 
+// ── PDF Export — rendu navigateur (border-radius, JetBrains Mono, hljs) ──
+
 document.getElementById('btnExport').addEventListener('click', () => {
-  const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head>
-<meta charset="UTF-8"><title>Markdown Export</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Fira+Code&display=swap" rel="stylesheet">
+  if (!editor.value.trim()) { showToast('Nothing to export'); return; }
+
+  const h1El   = preview.querySelector('h1');
+  const title  = h1El ? h1El.textContent.trim().replace(/</g,'&lt;') : 'Document';
+  const hljsHref = document.querySelector('link[href*="highlight"]')?.href || '';
+
+  // preview.innerHTML peut contenir des backticks ou ${...} — on le sort du template
+  const bodyHtml = preview.innerHTML;
+
+  const head = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+${hljsHref ? '<link rel="stylesheet" href="' + hljsHref + '">' : ''}
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Merriweather',serif;max-width:760px;margin:0 auto;padding:48px 40px;color:#1c1c1a;line-height:1.85;font-size:15px;-webkit-font-smoothing:antialiased}
-h1,h2,h3,h4,h5,h6{font-family:'Inter',sans-serif;font-weight:600;line-height:1.3;margin-top:1.8em;margin-bottom:.6em;color:#1a1a18}
-h1{font-size:1.9em;font-weight:700;padding-bottom:.5em;border-bottom:1px solid #e5e5e3;margin-top:0}
-h2{font-size:1.35em;padding-bottom:.35em;border-bottom:1px solid #e5e5e3}
-h3{font-size:1.1em}
-p{margin:.9em 0}
-a{color:#2563eb}
-strong{font-weight:700;color:#1a1a18}
-ul,ol{padding-left:1.5em;margin:.75em 0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+.export-banner{position:fixed;top:0;left:0;right:0;background:#0f172a;color:white;padding:11px 24px;display:flex;align-items:center;justify-content:space-between;font-family:'Inter',sans-serif;font-size:13px;z-index:999;gap:16px}
+.export-banner span{opacity:.75}
+.export-banner kbd{display:inline-block;padding:2px 6px;background:#1e293b;border:1px solid #334155;border-radius:4px;font-family:monospace;font-size:11px;color:#94a3b8}
+.export-banner strong{color:white;font-weight:600}
+.export-btn{background:#2563eb;color:white;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;white-space:nowrap}
+.export-btn:hover{background:#1d4ed8}
+body{font-family:'Merriweather',Georgia,serif;font-size:14.5px;line-height:1.85;color:#1e293b;background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.md{max-width:700px;margin:0 auto;padding:80px 48px 60px}
+h1,h2,h3,h4,h5,h6{font-family:'Inter',sans-serif;font-weight:600;line-height:1.3;color:#0f172a;margin-top:2em;margin-bottom:.55em}
+h1{font-size:2em;font-weight:700;letter-spacing:-.3px;border-bottom:1.5px solid #e2e8f0;padding-bottom:.45em;margin-top:0}
+h2{font-size:1.38em;border-bottom:1px solid #e2e8f0;padding-bottom:.3em}
+h3{font-size:1.12em}
+h4{font-size:1em;color:#475569}
+h5{font-size:.95em;color:#64748b}
+h6{font-size:.9em;color:#94a3b8}
+p{margin:.85em 0}
+a{color:#2563eb;text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+strong{font-weight:700;color:#0f172a}
+em{font-style:italic}
+ul,ol{padding-left:1.6em;margin:.8em 0}
 li{margin:.35em 0}
-blockquote{border-left:3px solid #d4d4d0;margin:1.5em 0;padding:.5em 1.2em;color:#6b6b66;font-style:italic;background:#f7f7f5;border-radius:0 8px 8px 0}
-code{font-family:'Fira Code',monospace;font-size:.83em;background:#f7f7f5;color:#c7254e;padding:2px 6px;border-radius:4px;border:1px solid #e5e5e3}
-pre{margin:1.4em 0;border-radius:8px;border:1px solid #e5e5e3;overflow:hidden}
-pre code{background:#f9f9f8;color:#1a1a18;padding:18px 22px;display:block;border:none;border-radius:0;font-size:13px;line-height:1.65}
-table{width:100%;border-collapse:collapse;margin:1.4em 0;font-size:14px;font-family:'Inter',sans-serif}
-th{background:#f7f7f5;text-align:left;font-weight:600;font-size:12px;padding:10px 14px;border:1px solid #e5e5e3;color:#6b6b66}
-td{padding:9px 14px;border:1px solid #e5e5e3}
-hr{border:none;border-top:1px solid #e5e5e3;margin:2em 0}
-img{max-width:100%;border-radius:8px;border:1px solid #e5e5e3}
-@media print{body{padding:0 24px}h1{page-break-after:avoid}pre,blockquote,table{page-break-inside:avoid}}
-</style></head><body>${preview.innerHTML}</body></html>`);
+ul li::marker{color:#94a3b8;content:"-- "}
+code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.81em;background:#fdf2f4;color:#be123c;padding:2px 6px;border-radius:5px;border:1px solid #fecdd3;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+pre{margin:1.3em 0;border-radius:8px;overflow:hidden;border-left:4px solid #64748b;background:#f8fafc;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+pre code{display:block;padding:16px 20px;background:#f8fafc;color:#1e293b;border:none;border-radius:0;font-size:12.5px;line-height:1.7;overflow-x:auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+pre .hljs{background:#f8fafc !important;padding:16px 20px !important}
+blockquote{border-left:3px solid #cbd5e1;margin:1.4em 0;padding:.55em 1.2em;color:#64748b;font-style:italic;background:#f8fafc;border-radius:0 7px 7px 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+blockquote p{margin:0}
+table{width:100%;border-collapse:collapse;margin:1.3em 0;font-size:13px;font-family:'Inter',sans-serif}
+th{background:#f8fafc;text-align:left;font-weight:600;font-size:11.5px;letter-spacing:.3px;padding:10px 14px;border-top:1.5px solid #e2e8f0;border-bottom:1.5px solid #e2e8f0;color:#475569;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}
+hr{border:none;border-top:1px solid #e2e8f0;margin:2em 0}
+img{max-width:100%;border-radius:8px;border:1px solid #e2e8f0}
+@media print{
+  .export-banner{display:none !important}
+  .md{padding:0;max-width:100%}
+  body{font-size:12.5px}
+  @page{margin:18mm 20mm 18mm 20mm;size:A4}
+  h2,h3,h4{page-break-after:avoid}
+  pre,blockquote,table{page-break-inside:avoid}
+  a{color:#2563eb !important}
+}
+</style>
+</head>
+<body>
+<div class="export-banner">
+  <span>Sélectionner <strong>Enregistrer en PDF</strong> dans la boite de dialogue \u2014 ou <kbd>Ctrl+P</kbd></span>
+  <button class="export-btn" onclick="window.print()">\u2b07 Enregistrer en PDF</button>
+</div>
+<div class="md">`;
+
+  const foot = `</div>
+<script>document.fonts.ready.then(()=>setTimeout(()=>window.print(),400));<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.open();
+  win.document.write(head + bodyHtml + foot);
   win.document.close();
-  setTimeout(() => win.print(), 500);
 });
 
 document.getElementById('btnScrollTop').addEventListener('click', () => {
