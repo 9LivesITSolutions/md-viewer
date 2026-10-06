@@ -1,9 +1,13 @@
 # md-viewer
 
+> Clean, zero-dependency Markdown editor with live preview — single HTML file, no build step required.
+
 ![HTML](https://img.shields.io/badge/HTML-single--file-orange?logo=html5)
 ![No dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Version](https://img.shields.io/badge/version-1.0.0-green)
+
+[Version française](README.fr.md)
 
 A clean, self-contained Markdown editor and live preview — no build step, no server, no dependencies to install. Open `md-viewer.html` in any modern browser and start writing.
 
@@ -74,10 +78,22 @@ Works in all modern browsers: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+.
 
 ---
 
-## License
+## Contributing
 
-MIT — see [LICENSE](LICENSE).
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'feat: add my-feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
+
+Please follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
 
 ---
 
-*9 Lives IT Solutions — Healthcare IT & Infrastructure Automation*
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+Maintained by **9 Lives IT Solutions** — Healthcare IT & Infrastructure Automation.
